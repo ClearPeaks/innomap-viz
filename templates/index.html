@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InnoMap</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+	<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #00EABC 0%, #003034 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: white;
+            background-clip: text;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 20px;
+        }
+
+        .sidebar {
+            width: 250px;
+            flex-shrink: 0;
+        }
+
+        .controls-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            height: 830px;
+            overflow-y: auto;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .filter-label {
+            font-weight: bold;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .filter-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .filter-option {
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.75rem;
+            user-select: none;
+        }
+
+        .filter-option:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+
+        .filter-option.selected {
+            background: rgba(0,234,188,0.8);
+            border-color: #00EABC;
+            box-shadow: 0 3px 12px rgba(0,234,188,0.3);
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.75rem;
+            user-select: none;
+        }
+
+        .toggle-switch:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+
+        .toggle-switch.enabled {
+            background: rgba(0,234,188,0.8);
+            border-color: #00EABC;
+            box-shadow: 0 3px 12px rgba(0,234,188,0.3);
+        }
+
+        .toggle-indicator {
+            width: 36px;
+            height: 20px;
+            background: rgba(120,120,120,0.8);
+            border-radius: 10px;
+            position: relative;
+            transition: background-color 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .toggle-indicator::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch.enabled .toggle-indicator {
+            background: rgba(0,234,188,0.9);
+        }
+
+        .toggle-switch.enabled .toggle-indicator::before {
+            transform: translateX(16px);
+        }
+
+        .cc-legend-filters {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .cc-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.75rem;
+            user-select: none;
+        }
+
+        .cc-legend-item:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+
+        .cc-legend-item.selected {
+            background: rgba(0,234,188,0.8);
+            border-color: #00EABC;
+            box-shadow: 0 3px 12px rgba(0,234,188,0.3);
+        }
+
+        .cc-legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.5);
+            flex-shrink: 0;
+        }
+
+        .chart-container {
+            flex: 1;
+            position: relative;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 10px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .chart {
+            position: relative;
+            width: 100%;
+            height: 800px;
+            overflow: hidden;
+        }
+
+        .axis {
+            position: absolute;
+            font-weight: bold;
+            font-size: 0.9rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .y-axis {
+            left: 10px;
+            top: 50%;
+            transform: rotate(-90deg) translateY(-50%);
+            transform-origin: center;
+        }
+
+        .x-axis {
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .project-node {
+            position: absolute;
+            background: rgba(255,255,255,0.9);
+            border: 2px solid rgba(0,234,188,0.8);
+            border-radius: 35px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            transform-origin: center;
+            min-width: 80px;
+            max-width: 120px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .project-node:hover {
+            transform: scale(1.15);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+            border-color: #00EABC;
+            z-index: 100;
+            background: rgba(255,255,255,0.95);
+        }
+
+        .project-name {
+            font-weight: bold;
+            color: #003034;
+            font-size: 0.7rem;
+            margin-bottom: 6px;
+            line-height: 1.1;
+        }
+
+        .cc-dots {
+            display: flex;
+            justify-content: center;
+            gap: 3px;
+            flex-wrap: wrap;
+        }
+
+        .cc-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.95);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            max-width: 400px;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip-section {
+            margin-bottom: 15px;
+        }
+
+        .tooltip-label {
+            font-weight: bold;
+            color: #00EABC;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        .tooltip-content {
+            line-height: 1.4;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+            }
+            
+            .controls-section {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            
+            .cc-legend-filters {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">InnoMap</h1>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="controls-section">
+                    <div class="filter-group">
+                        <div class="filter-label">Stage</div>
+                        <div class="filter-options">
+                            <div class="filter-option selected" data-stage-type="target">Target</div>
+                            <div class="filter-option" data-stage-type="current">Current</div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <div class="toggle-switch" id="early-stage-toggle">
+                            <div class="toggle-indicator"></div>
+                            <span>Include Early Stage</span>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <div class="filter-label">Competency Centers</div>
+                        <div class="cc-legend-filters" id="cc-legend-filters"></div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <div class="filter-label">Locations</div>
+                        <div class="filter-options" id="location-filters"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart" id="chart">
+                    <div class="axis y-axis">Value</div>
+                    <div class="axis x-axis">Stage</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // CC color mapping
+        const CC_COLORS = {
+            'Azure': '#0078d4',
+            'Databricks': '#ff3621',
+            'GCP': '#fbbc04',
+            'Snowflake': '#56b9e9',
+            'AWS': '#ff9900',
+            'AI': '#8b5cf6',
+            'Data Strategy': '#6366f1',
+            'Innovation Center': '#10b981'
+        };
+
+        let projects = [];
+        let filteredProjects = [];
+        let selectedStageType = 'target';
+        let selectedCCs = new Set();
+        let selectedLocations = new Set();
+        let includeEarlyStage = false; // Default to false (only B,C stages)
+
+        // Initialize filter options
+        function initializeFilters() {
+            const allCCs = new Set();
+            const allLocations = new Set();
+
+            projects.forEach(project => {
+                project.relatedCC.forEach(cc => allCCs.add(cc));
+                project.ownerLocation.forEach(loc => allLocations.add(loc));
+            });
+
+            // Create CC legend-filters (merged)
+            const ccLegendFilters = document.getElementById('cc-legend-filters');
+            Object.entries(CC_COLORS).forEach(([cc, color]) => {
+                if (Array.from(allCCs).includes(cc)) {
+                    const item = document.createElement('div');
+                    item.className = 'cc-legend-item';
+                    item.dataset.cc = cc;
+                    
+                    const dot = document.createElement('div');
+                    dot.className = 'cc-legend-dot';
+                    dot.style.backgroundColor = color;
+                    
+                    const label = document.createElement('span');
+                    label.textContent = cc;
+                    
+                    item.appendChild(dot);
+                    item.appendChild(label);
+                    item.addEventListener('click', toggleCCFilter);
+                    ccLegendFilters.appendChild(item);
+                }
+            });
+
+            // Create location filters
+            const locationFilters = document.getElementById('location-filters');
+            Array.from(allLocations).sort().forEach(location => {
+                if (location) {
+                    const option = document.createElement('div');
+                    option.className = 'filter-option';
+                    option.textContent = location;
+                    option.dataset.location = location;
+                    option.addEventListener('click', toggleLocationFilter);
+                    locationFilters.appendChild(option);
+                }
+            });
+        }
+
+        // Filter event handlers
+        document.querySelectorAll('[data-stage-type]').forEach(option => {
+            option.addEventListener('click', (e) => {
+                document.querySelectorAll('[data-stage-type]').forEach(opt => opt.classList.remove('selected'));
+                e.target.classList.add('selected');
+                selectedStageType = e.target.dataset.stageType;
+                applyFilters();
+            });
+        });
+
+        // Early stage toggle handler
+        const toggle = document.getElementById('early-stage-toggle');
+		toggle.addEventListener('click', () => {
+			includeEarlyStage = !includeEarlyStage;
+			toggle.classList.toggle('enabled', includeEarlyStage);
+			applyFilters();
+		});
+
+
+        function toggleCCFilter(e) {
+            const cc = e.target.closest('.cc-legend-item').dataset.cc;
+            if (selectedCCs.has(cc)) {
+                selectedCCs.delete(cc);
+                e.target.closest('.cc-legend-item').classList.remove('selected');
+            } else {
+                selectedCCs.add(cc);
+                e.target.closest('.cc-legend-item').classList.add('selected');
+            }
+            applyFilters();
+        }
+
+        function toggleLocationFilter(e) {
+            const location = e.target.dataset.location;
+            if (selectedLocations.has(location)) {
+                selectedLocations.delete(location);
+                e.target.classList.remove('selected');
+            } else {
+                selectedLocations.add(location);
+                e.target.classList.add('selected');
+            }
+            applyFilters();
+        }
+
+        // Apply filters and render chart
+        function applyFilters() {
+            filteredProjects = projects.filter(project => {
+                // Only active projects
+                if (!project.active) return false;
+
+                // Stage filter based on includeEarlyStage toggle
+                const stage = selectedStageType === 'target' ? project.targetStage : project.currentStage;
+                if (includeEarlyStage) {
+                    // Include A, B, C stages
+                    if (stage !== 'A' && stage !== 'B' && stage !== 'C') return false;
+                } else {
+                    // Only B, C stages
+                    if (stage !== 'B' && stage !== 'C') return false;
+                }
+
+                // CC filter
+                if (selectedCCs.size > 0) {
+                    const hasSelectedCC = project.relatedCC.some(cc => selectedCCs.has(cc));
+                    if (!hasSelectedCC) return false;
+                }
+
+                // Location filter
+                if (selectedLocations.size > 0) {
+                    const hasSelectedLocation = project.ownerLocation.some(loc => selectedLocations.has(loc));
+                    if (!hasSelectedLocation) return false;
+                }
+
+                return true;
+            });
+
+            renderChart();
+        }
+
+        // Render the chart
+        function renderChart() {
+            const chart = document.getElementById('chart');
+            
+            // Clear existing projects
+            chart.querySelectorAll('.project-node').forEach(node => node.remove());
+
+            const chartRect = chart.getBoundingClientRect();
+            const chartWidth = chartRect.width - 80; // Proper margins restored
+            const chartHeight = chartRect.height - 80;
+
+            // Group projects by position to handle overlaps
+            const positionGroups = {};
+            
+            filteredProjects.forEach(project => {
+                const stage = selectedStageType === 'target' ? project.targetStage : project.currentStage;
+                const value = project.strategicValue || 0;
+                
+                const key = `${value}-${stage}`;
+                if (!positionGroups[key]) {
+                    positionGroups[key] = [];
+                }
+                positionGroups[key].push(project);
+            });
+
+            // Render projects with improved overlap handling
+            Object.values(positionGroups).forEach(group => {
+                group.forEach((project, index) => {
+                    const stage = selectedStageType === 'target' ? project.targetStage : project.currentStage;
+                    const value = project.strategicValue || 0;
+                    
+                    // Calculate base position optimized for value range 1-5
+                    let x = 50;
+                    if (stage === 'A') x = chartWidth * 0.15;
+                    if (stage === 'B') x = chartWidth * 0.5;
+                    if (stage === 'C') x = chartWidth * 0.85;
+                    
+                    // Optimize Y positioning for values 1-5 with minimal top margin
+                    let y = chartHeight - ((value - 0.5) / 4.5) * (chartHeight - 40) + 20;
+                    
+                    // Improved overlap handling with larger spread
+                    if (group.length > 1) {
+                        const itemsPerRow = Math.max(2, Math.ceil(Math.sqrt(group.length)));
+                        const row = Math.floor(index / itemsPerRow);
+                        const col = index % itemsPerRow;
+                        
+                        // Grid-based positioning with increased spacing
+                        const gridSpacing = Math.max(120, Math.min(160, 300 / itemsPerRow));
+                        const offsetX = (col - (itemsPerRow - 1) / 2) * gridSpacing;
+                        const offsetY = (row - Math.floor((group.length - 1) / itemsPerRow) / 2) * (gridSpacing * 0.8);
+                        
+                        // Add larger random component for more natural spread
+                        const randomX = (Math.random() - 0.5) * 40;
+                        const randomY = (Math.random() - 0.5) * 40;
+                        
+                        x += offsetX + randomX;
+                        y += offsetY + randomY;
+                    }
+
+                    // Ensure nodes stay within chart bounds with proper margins
+                    x = Math.max(40, Math.min(chartWidth - 40, x));
+                    y = Math.max(30, Math.min(chartHeight - 30, y));
+
+                    createProjectNode(project, x, y);
+                });
+            });
+        }
+
+        // Create project node
+        function createProjectNode(project, x, y) {
+            const node = document.createElement('div');
+            node.className = 'project-node';
+            node.style.left = `${x}px`;
+            node.style.top = `${y}px`;
+
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'project-name';
+            nameDiv.textContent = project.name;
+
+            const ccDotsDiv = document.createElement('div');
+            ccDotsDiv.className = 'cc-dots';
+
+            project.relatedCC.forEach(cc => {
+                if (CC_COLORS[cc]) {
+                    const dot = document.createElement('div');
+                    dot.className = 'cc-dot';
+                    dot.style.backgroundColor = CC_COLORS[cc];
+                    ccDotsDiv.appendChild(dot);
+                }
+            });
+
+            node.appendChild(nameDiv);
+            node.appendChild(ccDotsDiv);
+
+            // Add hover events
+            node.addEventListener('mouseenter', (e) => showTooltip(e, project));
+            node.addEventListener('mouseleave', hideTooltip);
+            node.addEventListener('mousemove', (e) => updateTooltipPosition(e));
+
+            document.getElementById('chart').appendChild(node);
+        }
+
+        // Tooltip functions
+        function showTooltip(e, project) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = `
+                <div class="tooltip-section">
+                    <div class="tooltip-label">Description</div>
+                    <div class="tooltip-content">${project.description}</div>
+                </div>
+                <div class="tooltip-section">
+                    <div class="tooltip-label">Owner Information</div>
+                    <div class="tooltip-content">
+                        <strong>Names:</strong> ${project.ownerNames}<br>
+                        <strong>Team:</strong> ${project.ownerTeam}<br>
+                        <strong>Locations:</strong> ${project.ownerLocation.join(', ')}
+                    </div>
+                </div>
+                <div class="tooltip-section">
+                    <div class="tooltip-label">Outcomes</div>
+                    <div class="tooltip-content">
+                        <strong>Current:</strong> ${project.currentOutcome}<br>
+                        <strong>Target:</strong> ${project.targetOutcome}
+                    </div>
+                </div>
+                <div class="tooltip-section">
+                    <div class="tooltip-label">Technologies</div>
+                    <div class="tooltip-content">${project.technology.join(', ')}</div>
+                </div>
+                <div class="tooltip-section">
+                    <div class="tooltip-label">Benefits</div>
+                    <div class="tooltip-content">${project.benefits}</div>
+                </div>
+            `;
+            
+            updateTooltipPosition(e);
+            tooltip.classList.add('visible');
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('visible');
+        }
+
+        function updateTooltipPosition(e) {
+            const tooltip = document.getElementById('tooltip');
+            const rect = tooltip.getBoundingClientRect();
+            let x = e.pageX + 10;
+            let y = e.pageY + 10;
+
+            // Prevent tooltip from going off screen
+            if (x + rect.width > window.innerWidth) {
+                x = e.pageX - rect.width - 10;
+            }
+            if (y + rect.height > window.innerHeight) {
+                y = e.pageY - rect.height - 10;
+            }
+
+            tooltip.style.left = `${x}px`;
+            tooltip.style.top = `${y}px`;
+        }
+
+        // Initialize the application
+		async function loadFromExcel() {
+			try {
+				const response = await fetch('SynvertInnoMapTracker.xlsx');
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+				const arrayBuffer = await response.arrayBuffer();
+				const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+				
+				// Get the first worksheet
+				const firstSheetName = workbook.SheetNames[0];
+				const worksheet = workbook.Sheets[firstSheetName];
+				
+				// Convert to JSON with headers
+				const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+					header: 1,
+					defval: ''
+				});
+				
+				// Extract headers and data rows
+				const headers = jsonData[0];
+				const dataRows = jsonData.slice(1);
+				
+				// Convert to objects with proper headers
+				const result = dataRows.map(row => {
+					const obj = {};
+					headers.forEach((header, index) => {
+						obj[header] = row[index] || '';
+					});
+					return obj;
+				}).filter(row => Object.values(row).some(val => val !== '')); // Skip empty rows
+				
+				projects = result.map(row => {
+					const strategicValue = parseInt(row['Strategic Value by Owner']) || null;
+					const ownerLocations = row['Owner Location'] ? row['Owner Location'].toString().split(',').map(s => s.trim()) : [];
+					const relatedCCs = row['Related CC'] ? row['Related CC'].toString().split(',').map(s => s.trim()) : [];
+					const technologies = row['Technology'] ? row['Technology'].toString().split(',').map(s => s.trim()) : [];
+					
+					return {
+						name: (row['Name'] || '').toString(),
+						description: (row['Description'] || '').toString(),
+						strategicValue: strategicValue,
+						ownerLocation: ownerLocations,
+						mainOwnerLocation: ownerLocations[0] || '',
+						ownerTeam: (row['Owner Team'] || '').toString(),
+						ownerNames: (row['Owner\nNames'] || row['Owner Names'] || '').toString(),
+						active: (row['Active'] || '').toString().toLowerCase() === 'yes',
+						currentOutcome: (row['Current Outcome'] || '').toString(),
+						targetOutcome: (row['Target Outcome'] || '').toString(),
+						currentStage: (row['Current Stage'] || '').toString(),
+						targetStage: (row['Target  Stage'] || row['Target Stage'] || '').toString(),
+						technology: technologies,
+						relatedCC: relatedCCs,
+						benefits: (row['Benefits (key selling/positioning points)'] || '').toString()
+					};
+				});
+
+				initializeFilters();
+				applyFilters();
+			} catch (error) {
+				console.error('Error loading from Excel:', error);
+				// Show error message
+			}
+		}
+		loadFromExcel();
+    </script>
+</body>
+</html>
