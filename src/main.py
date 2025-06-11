@@ -1,14 +1,25 @@
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, render_template, send_from_directory, request
 import yaml
 import os
-from sharepoint import SharePoint
 import webbrowser
-from flask import request
+from sharepoint import SharePoint
 
-app = Flask(__name__, static_folder='../static', template_folder='../templates')
+# Base directory
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Flask app setup
+app = Flask(
+    __name__,
+    static_folder=os.path.join(BASE_DIR, "..", "static"),
+    template_folder=os.path.join(BASE_DIR, "..", "templates")
+)
 
 def read_config() -> dict:
-    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "config.yml")
+    """
+    Read YAML configuration with the SharePoint information.
+    Extract required credentials to read SharePoint files and folders.
+    """
+    config_path = os.path.join(BASE_DIR, "..", "config.yml")
     with open(config_path) as stream:
         try:
             return yaml.safe_load(stream)
@@ -16,6 +27,10 @@ def read_config() -> dict:
             raise Exception("Error reading configuration file", exc)
 
 def download_excel():
+    """
+    Downloads the SynvertInnoMapTracker Excel file from SharePoint
+    and saves it to the static folder.
+    """
     config = read_config()
     sp = SharePoint(
         config["SharePoint"]["hostname"],
@@ -26,7 +41,7 @@ def download_excel():
     )
 
     file_url = config["SharePoint"]["innomap_doc"]["sp_link"]
-    save_path = os.path.join(os.path.dirname(__file__), "..", "static", "SynvertInnoMapTracker.xlsx")
+    save_path = os.path.join(BASE_DIR, "..", "static", "SynvertInnoMapTracker.xlsx")
 
     if os.path.exists(save_path):
         os.remove(save_path)
@@ -41,7 +56,8 @@ def home():
 
 @app.route("/SynvertInnoMapTracker.xlsx")
 def serve_excel():
-    return send_from_directory("../static", "SynvertInnoMapTracker.xlsx")
+    static_dir = os.path.join(BASE_DIR, "..", "static")
+    return send_from_directory(static_dir, "SynvertInnoMapTracker.xlsx")
 
 @app.route("/refresh-data")
 def refresh_data():
