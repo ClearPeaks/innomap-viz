@@ -73,5 +73,5 @@ def refresh_data():
 
 if __name__ == "__main__":
     download_excel()
-    webbrowser.open("http://localhost:8000")
+    #webbrowser.open("http://localhost:8000")
     app.run(host="0.0.0.0", port=8000)
