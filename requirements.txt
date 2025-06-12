@@ -3,4 +3,5 @@ requests>=2.25.0
 PyYAML>=5.4
 azure-identity>=1.14.0
 msgraph-core>=1.0.0
+msgraph-sdk>=1.0.0
 gunicorn>=20.0.4
