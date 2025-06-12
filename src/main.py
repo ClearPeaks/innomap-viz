@@ -77,6 +77,6 @@ def refresh_data():
         return f"Error: {str(e)}", 500
 
 if __name__ == "__main__":
-    #download_excel()
+    download_excel()
     #webbrowser.open("http://localhost:8000")
     app.run()
