@@ -1,8 +1,13 @@
+import sys
+import os
+
+# Ensure the src directory is in the Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from flask import Flask, render_template, send_from_directory, request
 import yaml
-import os
-import webbrowser
 from sharepoint import SharePoint
+import webbrowser
 
 # Base directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -74,4 +79,4 @@ def refresh_data():
 if __name__ == "__main__":
     #download_excel()
     #webbrowser.open("http://localhost:8000")
-    app.run(host="0.0.0.0", port=8000)
+    app.run()
