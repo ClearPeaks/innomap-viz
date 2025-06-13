@@ -57,7 +57,11 @@ def download_excel():
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    try:
+        download_excel()
+        return render_template("index.html")
+    except Exception as e:
+        return f"Error: {str(e)}", 500
 
 @app.route("/SynvertInnoMapTracker.xlsx")
 def serve_excel():
