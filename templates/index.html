@@ -54,7 +54,7 @@
             border-radius: 15px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
-            height: 830px;
+            height: 900px;
             overflow-y: auto;
         }
 
@@ -208,7 +208,7 @@
         .chart {
             position: relative;
             width: 100%;
-            height: 800px;
+            height: 870px;
             overflow: hidden;
         }
 
@@ -366,6 +366,16 @@
                     </div>
                     
                     <div class="filter-group">
+                        <div class="filter-label">Types</div>
+                        <div class="filter-options" id="type-filters"></div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <div class="filter-label">Levels</div>
+                        <div class="filter-options" id="level-filters"></div>
+                    </div>
+                    
+                    <div class="filter-group">
                         <div class="filter-label">Locations</div>
                         <div class="filter-options" id="location-filters"></div>
                     </div>
@@ -396,20 +406,37 @@
             'Innovation Center': '#10b981'
         };
 
+        // NEW: Type mapping
+        const TYPE_MAPPING = {
+            'I': 'Industry',
+            'F': 'Functional',
+            'EDP': 'EDP',
+            'IK': 'Infra',
+            'V': 'Front-End',
+            'M': 'Methodologies',
+            'B': 'BI',
+            'SO': 'Service Offerings',
+            'L': 'Learning'
+        };
+
         let projects = [];
         let filteredProjects = [];
         let selectedStageType = 'target';
         let selectedCCs = new Set();
+        let selectedTypes = new Set();
+        let selectedLevels = new Set();
         let selectedLocations = new Set();
         let includeEarlyStage = false; // Default to false (only B,C stages)
 
         // Initialize filter options
         function initializeFilters() {
             const allCCs = new Set();
+            const allTypes = new Set();
             const allLocations = new Set();
 
             projects.forEach(project => {
                 project.relatedCC.forEach(cc => allCCs.add(cc));
+                if (project.type) allTypes.add(project.type);
                 project.ownerLocation.forEach(loc => allLocations.add(loc));
             });
 
@@ -434,6 +461,31 @@
                     ccLegendFilters.appendChild(item);
                 }
             });
+
+            // Create type filters - MODIFIED TO USE MAPPING
+            const typeFilters = document.getElementById('type-filters');
+            Array.from(allTypes).sort().forEach(type => {
+                if (type) {
+                    const option = document.createElement('div');
+                    option.className = 'filter-option';
+                    // Use mapped name for display, fall back to original if no mapping
+                    option.textContent = TYPE_MAPPING[type] || type; 
+                    option.dataset.type = type; // Keep original code for filtering logic
+                    option.addEventListener('click', toggleTypeFilter);
+                    typeFilters.appendChild(option);
+                }
+            });
+
+            // Create level filters (updated to include level 0-4 explicitly)
+            const levelFilters = document.getElementById('level-filters');
+            for (let i = 0; i <= 4; i++) { // Loop from 0 to 4 to ensure all levels are displayed
+                const option = document.createElement('div');
+                option.className = 'filter-option';
+                option.textContent = i;
+                option.dataset.level = i; // Store as number for consistency with project.level
+                option.addEventListener('click', toggleLevelFilter);
+                levelFilters.appendChild(option);
+            }
 
             // Create location filters
             const locationFilters = document.getElementById('location-filters');
@@ -467,7 +519,6 @@
 			applyFilters();
 		});
 
-
         function toggleCCFilter(e) {
             const cc = e.target.closest('.cc-legend-item').dataset.cc;
             if (selectedCCs.has(cc)) {
@@ -476,6 +527,31 @@
             } else {
                 selectedCCs.add(cc);
                 e.target.closest('.cc-legend-item').classList.add('selected');
+            }
+            applyFilters();
+        }
+
+        function toggleTypeFilter(e) {
+            const type = e.target.dataset.type;
+            if (selectedTypes.has(type)) {
+                selectedTypes.delete(type);
+                e.target.classList.remove('selected');
+            } else {
+                selectedTypes.add(type);
+                e.target.classList.add('selected');
+            }
+            applyFilters();
+        }
+
+        function toggleLevelFilter(e) {
+            const level = parseInt(e.target.dataset.level); // Parse as integer
+            console.log("Toggling level:", level, typeof level); // Debugging line
+            if (selectedLevels.has(level)) {
+                selectedLevels.delete(level);
+                e.target.classList.remove('selected');
+            } else {
+                selectedLevels.add(level);
+                e.target.classList.add('selected');
             }
             applyFilters();
         }
@@ -494,6 +570,7 @@
 
         // Apply filters and render chart
         function applyFilters() {
+            console.log("Selected levels (before filter application):", selectedLevels); // Debugging line
             filteredProjects = projects.filter(project => {
                 // Only active projects
                 if (!project.active) return false;
@@ -512,6 +589,18 @@
                 if (selectedCCs.size > 0) {
                     const hasSelectedCC = project.relatedCC.some(cc => selectedCCs.has(cc));
                     if (!hasSelectedCC) return false;
+                }
+
+                // Type filter
+                if (selectedTypes.size > 0) {
+                    if (!selectedTypes.has(project.type)) return false;
+                }
+
+                // Level filter
+                if (selectedLevels.size > 0) {
+                    console.log("Project level:", project.level, typeof project.level); // Debugging line
+                    // Compare integer level with integer level
+                    if (project.level === null || project.level === undefined || !selectedLevels.has(project.level)) return false;
                 }
 
                 // Location filter
@@ -637,6 +726,13 @@
                     <div class="tooltip-content">${project.description}</div>
                 </div>
                 <div class="tooltip-section">
+                    <div class="tooltip-label">Type & Level</div>
+                    <div class="tooltip-content">
+                        <strong>Type:</strong> ${project.type || 'N/A'}<br>
+                        <strong>Level:</strong> ${project.level !== null && project.level !== undefined ? project.level : 'N/A'}
+                    </div>
+                </div>
+                <div class="tooltip-section">
                     <div class="tooltip-label">Owner Information</div>
                     <div class="tooltip-content">
                         <strong>Names:</strong> ${project.ownerNames}<br>
@@ -715,7 +811,13 @@
 				const result = dataRows.map(row => {
 					const obj = {};
 					headers.forEach((header, index) => {
-						obj[header] = row[index] || '';
+						if (header === 'Level') {
+							const val = row[index];
+							obj[header] = (val === null || val === undefined || val === '') ? null : parseInt(val);
+                            if (isNaN(obj[header])) obj[header] = null;
+						} else {
+							obj[header] = row[index] || '';
+						}
 					});
 					return obj;
 				}).filter(row => Object.values(row).some(val => val !== '')); // Skip empty rows
@@ -741,9 +843,13 @@
 						targetStage: (row['Target  Stage'] || row['Target Stage'] || '').toString(),
 						technology: technologies,
 						relatedCC: relatedCCs,
-						benefits: (row['Benefits (key selling/positioning points)'] || '').toString()
+						benefits: (row['Benefits (key selling/positioning points)'] || '').toString(),
+						type: (row['Type'] || '').toString(),
+						level: row['Level']
 					};
 				});
+
+                console.log("All project levels after loading:", projects.map(p => p.level));
 
 				initializeFilters();
 				applyFilters();
