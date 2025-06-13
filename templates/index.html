@@ -719,6 +719,9 @@
 
         // Tooltip functions
         function showTooltip(e, project) {
+            // Determine the display type based on mapping
+            const displayType = project.type ? (TYPE_MAPPING[project.type] || project.type) : 'N/A';
+
             const tooltip = document.getElementById('tooltip');
             tooltip.innerHTML = `
                 <div class="tooltip-section">
@@ -728,7 +731,7 @@
                 <div class="tooltip-section">
                     <div class="tooltip-label">Type & Level</div>
                     <div class="tooltip-content">
-                        <strong>Type:</strong> ${project.type || 'N/A'}<br>
+                        <strong>Type:</strong> ${displayType}<br>
                         <strong>Level:</strong> ${project.level !== null && project.level !== undefined ? project.level : 'N/A'}
                     </div>
                 </div>
