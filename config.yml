@@ -1,6 +1,6 @@
 SharePoint:
-  hostname: clearpeaks-portal1.sharepoint.com
-  site_name: ''
+  hostname: saracus.sharepoint.com
+  site_name: a_SYCP_InnovationCenter
   app_registration:
     tenant_id: 5dc9cc33-bce8-4581-bc49-05e82d3943c2
     client_id: d2927390-8649-484d-a75f-0703a34055ca
