@@ -1,9 +1,9 @@
 SharePoint:
-  hostname: saracus.sharepoint.com
+  hostname: clearpeaks-portal1.sharepoint.com
   site_name: ''
   app_registration:
-    tenant_id: 5dc9cc33-bce8-4581-bc49-05e82d3943c2
-    client_id: d2927390-8649-484d-a75f-0703a34055ca
+    tenant_id: d5b4529b-7457-49d9-931b-7c7f9b9eed54
+    client_id: 48bf8875-535a-40e0-8a2a-224851c56dad
     client_secret: SP_CLIENT_SECRET
   innomap_doc:
-    sp_link: https://saracus.sharepoint.com/:x:/r/sites/a_SYCP_InnovationCenter/Freigegebene%20Dokumente/General/SynvertInnoMapTracker.xlsx
+    sp_link: https://clearpeaks-portal1.sharepoint.com/Shared%20Documents/Delivery/InnoHub/InnoMap/SynvertInnoMapTracker.xlsx
