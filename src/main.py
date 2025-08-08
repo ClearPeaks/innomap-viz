@@ -6,7 +6,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask, render_template, send_from_directory, request
 import yaml
-from sharepoint import SharePoint
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'external', 'innohub-backend')))
+from innohub_backend.services.sharepoint import SharePoint
 import webbrowser
 
 # Base directory
@@ -37,12 +38,17 @@ def download_excel():
     and saves it to the static folder.
     """
     config = read_config()
+
     sp = SharePoint(
-        config["SharePoint"]["hostname"],
-        config["SharePoint"]["site_name"],
-        config["SharePoint"]["app_registration"]["client_id"],
-        os.environ[config["SharePoint"]["app_registration"]["client_secret"]],
-        config["SharePoint"]["app_registration"]["tenant_id"]
+        # config["SharePoint"]["hostname"],
+        # config["SharePoint"]["site_name"],
+        # config["SharePoint"]["app_registration"]["client_id"],
+        # #os.environ[config["SharePoint"]["app_registration"]["client_secret"]],
+        # config["SharePoint"]["app_registration"]["tenant_id"]
+        os.environ['SP_HOSTNAME'],
+        os.environ['SP_SITE_NAME'],
+        os.environ['SP_DELEGATED_APP_ID'],
+        os.environ['SP_TENANT_ID']
     )
 
     file_url = config["SharePoint"]["innomap_doc"]["sp_link"]
@@ -52,7 +58,27 @@ def download_excel():
         os.remove(save_path)
         print(f"Deleted existing file: {save_path}")
 
-    sp.download_xlsx(file_url, save_path)
+    #sp.download_xlsx(file_url, save_path)
+    ####
+
+    if not save_path.endswith(".xlsx"):
+        raise ValueError("Only .xlsx files are supported.")
+
+    print(f"Attempting to download file from SharePoint: {file_url}")
+    file_bytes = sp._get_file_content(file_url)
+
+    if file_bytes is None:
+        raise FileNotFoundError(f"File not found or unsupported drive in SharePoint URL: {file_url}")
+
+    dir_path = os.path.dirname(save_path)
+    if dir_path:
+        os.makedirs(dir_path, exist_ok=True)
+
+    with open(save_path, "wb") as f:
+        f.write(file_bytes)
+
+    print(f"File successfully saved to: {save_path}")
+
     print(f"Downloaded file to: {save_path}")
 
 @app.route("/")
