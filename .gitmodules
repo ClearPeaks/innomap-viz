@@ -1,0 +1,4 @@
+[submodule "external/innohub-backend"]
+	path = external/innohub-backend
+	url = https://github.com/ClearPeaks/innohub-backend
+	branch = main
