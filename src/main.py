@@ -3,11 +3,12 @@ import os
 
 # Ensure the src directory is in the Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'external', 'innohub-backend')))
 
 from flask import Flask, render_template, send_from_directory, request
 import yaml
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'external', 'innohub-backend')))
 from innohub_backend.services.sharepoint import SharePoint
+from common.keyvault import KeyVaultClient
 import webbrowser
 
 # Base directory
@@ -39,16 +40,13 @@ def download_excel():
     """
     config = read_config()
 
+    # Initialize SharePoint object to get token, site_id, and drive_id
+    key_vault_client = KeyVaultClient()
     sp = SharePoint(
-        # config["SharePoint"]["hostname"],
-        # config["SharePoint"]["site_name"],
-        # config["SharePoint"]["app_registration"]["client_id"],
-        # #os.environ[config["SharePoint"]["app_registration"]["client_secret"]],
-        # config["SharePoint"]["app_registration"]["tenant_id"]
-        os.environ['SP_HOSTNAME'],
-        os.environ['SP_SITE_NAME'],
-        os.environ['SP_DELEGATED_APP_ID'],
-        os.environ['SP_TENANT_ID']
+        key_vault_client.get_secret("SP_HOSTNAME"),
+        key_vault_client.get_secret("SP_SITE_NAME"),
+        key_vault_client.get_secret("SP_DELEGATED_APP_ID"),
+        key_vault_client.get_secret("SP_TENANT_ID")
     )
 
     file_url = config["SharePoint"]["innomap_doc"]["sp_link"]
@@ -57,9 +55,6 @@ def download_excel():
     if os.path.exists(save_path):
         os.remove(save_path)
         print(f"Deleted existing file: {save_path}")
-
-    #sp.download_xlsx(file_url, save_path)
-    ####
 
     if not save_path.endswith(".xlsx"):
         raise ValueError("Only .xlsx files are supported.")
